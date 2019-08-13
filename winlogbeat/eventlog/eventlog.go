@@ -156,6 +156,58 @@ func (e Record) ToEvent() beat.Event {
 	}
 }
 
+// 兼容之前版本的方法
+func (e Record) ToMapStr() common.MapStr {
+	m := common.MapStr{
+		"type":          e.API,
+		"log_name":      e.Channel,
+		"source_name":   e.Provider.Name,
+		"computer_name": e.Computer,
+		"record_number": strconv.FormatUint(e.RecordID, 10),
+		"event_id":      e.EventIdentifier.ID,
+	}
+
+	addOptional(m, "xml", e.XML)
+	addOptional(m, "provider_guid", e.Provider.GUID)
+	addOptional(m, "version", e.Version)
+	addOptional(m, "level", e.Level)
+	addOptional(m, "task", e.Task)
+	addOptional(m, "opcode", e.Opcode)
+	addOptional(m, "keywords", e.Keywords)
+	addOptional(m, "message", sys.RemoveWindowsLineEndings(e.Message))
+	addOptional(m, "message_error", e.RenderErr)
+
+	// Correlation
+	addOptional(m, "activity_id", e.Correlation.ActivityID)
+	addOptional(m, "related_activity_id", e.Correlation.RelatedActivityID)
+
+	// Execution
+	addOptional(m, "process_id", e.Execution.ProcessID)
+	addOptional(m, "thread_id", e.Execution.ThreadID)
+	addOptional(m, "processor_id", e.Execution.ProcessorID)
+	addOptional(m, "session_id", e.Execution.SessionID)
+	addOptional(m, "kernel_time", e.Execution.KernelTime)
+	addOptional(m, "user_time", e.Execution.UserTime)
+	addOptional(m, "processor_time", e.Execution.ProcessorTime)
+
+	if e.User.Identifier != "" {
+		user := common.MapStr{
+			"identifier": e.User.Identifier,
+		}
+		m["user"] = user
+
+		addOptional(user, "name", e.User.Name)
+		addOptional(user, "domain", e.User.Domain)
+		addOptional(user, "type", e.User.Type.String())
+	}
+
+	addPairs(m, "event_data", e.EventData.Pairs)
+	userData := addPairs(m, "user_data", e.UserData.Pairs)
+	addOptional(userData, "xml_name", e.UserData.Name.Local)
+
+	return m
+}
+
 // addOptional adds a key and value to the given MapStr if the value is not the
 // zero value for the type of v. It is safe to call the function with a nil
 // MapStr.
