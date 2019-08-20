@@ -32,6 +32,7 @@ var _ unsafe.Pointer
 // Errno values.
 const (
 	errnoERROR_IO_PENDING = 997
+	ptrSize               = unsafe.Sizeof(uintptr(0))
 )
 
 var (
@@ -176,7 +177,13 @@ func _EvtClose(object EvtHandle) (err error) {
 }
 
 func _EvtSeek(resultSet EvtHandle, position int64, bookmark EvtHandle, timeout uint32, flags uint32) (success bool, err error) {
-	r0, _, e1 := syscall.Syscall6(procEvtSeek.Addr(), 5, uintptr(resultSet), uintptr(position), uintptr(bookmark), uintptr(timeout), uintptr(flags), 0)
+	var r0 uintptr
+	var e1 syscall.Errno
+	if ptrSize == 8 {
+		r0, _, e1 = syscall.Syscall6(procEvtSeek.Addr(), 5, uintptr(resultSet), uintptr(position), uintptr(bookmark), uintptr(timeout), uintptr(flags), 0)
+	} else {
+		r0, _, e1 = syscall.Syscall6(procEvtSeek.Addr(), 6, uintptr(resultSet), uintptr(position), uintptr(position>>32), uintptr(bookmark), uintptr(timeout), uintptr(flags))
+	}
 	success = r0 != 0
 	if !success {
 		if e1 != 0 {
